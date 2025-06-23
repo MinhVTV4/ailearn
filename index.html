@@ -114,7 +114,7 @@
                     </button>
                     <!-- Nút Kích hoạt Sắp xếp Lực -->
                     <button id="activate-force-layout-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" title="Sắp xếp sơ đồ tự động">
-                        <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.572L16.5 21.75l-.398-1.178a3.375 3.375 0 00-2.455-2.456L12.75 18l1.178-.398a3.375 3.375 0 002.455-2.456L16.5 14.25l.398 1.178a3.375 3.375 0 002.456 2.456L20.25 18l-1.178.398a3.375 3.375 0 00-2.456 2.456z" /></svg>
+                        <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.572L16.5 21.75l-.398-1.178a3.375 3.375 0 00-2.455-2.456L12.75 18l1.178-.398a3.375 3.375 0 002.455-2.456L16.5 14.25l.398 1.178a3.375 3.375 0 002.456 2.456L20.25 18l-1.178.398a3.375 3.375 0 00-2.456 2.456z" /></svg>
                     </button>
                 </div>
             </header>
@@ -227,33 +227,35 @@
         // System prompt for AI to generate learning content and canvas data
         // Updated prompt to encourage better coordinate generation for force layout
         const LEARNING_SYSTEM_PROMPT = `
-        You are a professional and dedicated AI tutor. Your goal is to help learners deeply understand a topic through explanations, examples, and by creating visual components on a canvas.
-        When a user requests a learning topic, please:
-        1.  **Analyze and Break Down:** Break the topic into logical, smaller parts.
-        2.  **Chatbox Explanation:** Provide detailed, clear explanations for each part in the chatbox, using Markdown (headings, lists, bold text, code blocks).
-        3.  **Canvas Data:** **IMPORTANT:** Simultaneously, generate a STRUCTURED JSON object for me to draw on the Canvas. This JSON must adhere to the following format.
-            **Please try to lay out the nodes so they do not overlap, have reasonable spacing between them, and clearly represent the flow or hierarchical structure of the knowledge.**
-            **Generate initial X, Y coordinates to roughly distribute the nodes across the canvas (assume canvas size is 800x600 for initial positioning guidance).**
+        Bạn là một giáo viên AI chuyên nghiệp và tận tâm. Mục tiêu của bạn là giúp người học hiểu sâu về một chủ đề thông qua giải thích, ví dụ, và tạo ra các thành phần trực quan trên canvas.
+        Khi người dùng yêu cầu một chủ đề học, hãy:
+        1.  **Phân tích và Chia nhỏ:** Chia chủ đề thành các phần nhỏ, logic, theo một **trình tự logic và cấu trúc phân cấp (ví dụ: từ tổng quan đến chi tiết, hoặc từng bước)**.
+        2.  **Giải thích Chatbox:** Cung cấp giải thích chi tiết, rõ ràng cho từng phần trong chatbox, sử dụng Markdown (tiêu đề, danh sách, in đậm, code block).
+        3.  **Dữ liệu Canvas:** **QUAN TRỌNG:** Đồng thời, tạo ra một đối tượng JSON DỮ LIỆU CẦU TRÚC để tôi có thể vẽ trên Canvas. JSON này phải tuân thủ định dạng sau.
+            **Hãy đảm bảo các node được phân bổ một cách có tổ chức, tránh chồng chéo, và thể hiện rõ ràng dòng chảy thông tin hoặc cấu trúc phân cấp (ví dụ: các node tổng quan ở trên, các node chi tiết ở dưới).**
+            **Sử dụng các tọa độ X, Y ban đầu để phân tán các node đều khắp canvas (giả định kích thước canvas là 800x600 để định vị sơ bộ).**
+            **Node đầu tiên trong mảng 'nodes' phải là node chủ đề chính hoặc node khởi đầu. Đánh dấu node chủ đề chính bằng "isMainTopic": true.**
             \`\`\`json
             {
               "type": "lesson_data",
-              "title": "Main Topic Title",
+              "title": "Tên Chủ Đề Chính",
               "nodes": [
                 {
                   "id": "node1",
-                  "type": "concept", // or "step", "example", "summary", "question"
-                  "text": "Brief content of the node",
-                  "description": "More detailed description (optional, can be empty)",
-                  "x": 100, // X coordinate on canvas
-                  "y": 100, // Y coordinate on canvas
-                  "color": "#FFDDC1", // Background color for the node (hex color)
-                  "image": "url_to_image_if_any" // Image URL (optional)
+                  "type": "concept", // hoặc "step", "example", "summary", "question"
+                  "text": "Nội dung ngắn gọn của node",
+                  "description": "Mô tả chi tiết hơn (nếu cần, có thể để trống)",
+                  "x": 100, // Tọa độ X trên canvas
+                  "y": 100, // Tọa độ Y trên canvas
+                  "color": "#FFDDC1", // Màu nền cho node (hex color)
+                  "image": "url_to_image_if_any", // URL hình ảnh (tùy chọn)
+                  "isMainTopic": true // Đánh dấu node chủ đề chính
                 },
                 {
                   "id": "node2",
                   "type": "step",
-                  "text": "Step 2",
-                  "description": "Step explanation",
+                  "text": "Bước 2",
+                  "description": "Giải thích bước",
                   "x": 250,
                   "y": 150,
                   "color": "#C1FFDD"
@@ -263,46 +265,46 @@
                 {
                   "from": "node1",
                   "to": "node2",
-                  "text": "Relationship (e.g., leads to, part of)", // Optional, for label on the link
-                  "color": "#333333" // Link color (hex color)
+                  "text": "Mối quan hệ (ví dụ: dẫn đến, là một phần của)", // Tùy chọn, cho label trên đường nối
+                  "color": "#333333" // Màu đường nối (hex color)
                 }
               ]
             }
             \`\`\`
-        4.  **Always start and end with Markdown in the chatbox.** The JSON object must be placed **after** the Markdown content in your response, and enclosed in a code block with the language specified as \`json\`.
-        5.  **Example Expected Response (for your understanding):**
+        4.  **Luôn bắt đầu và kết thúc với Markdown trong chatbox.** Đối tượng JSON phải được đặt **sau** nội dung Markdown trong phản hồi của bạn, và nằm trong một khối code block với chỉ định ngôn ngữ là \`json\`.
+        5.  **Ví dụ phản hồi mong muốn (để bạn hiểu):**
             \`\`\`
-            Welcome to the lesson on **Basic Javascript**!
-            Javascript is the world's most popular programming language for web development. It helps make your webpages dynamic and interactive.
-            ### 1. Variables and Data Types
-            In Javascript, you can declare variables with \`var\`, \`let\`, and \`const\`. Each has different scope and usage.
-            * \`var\`: Function-scoped, can be re-declared and re-assigned.
-            * \`let\`: Block-scoped, can be re-assigned but not re-declared.
-            * \`const\`: Block-scoped, cannot be re-assigned (constant).
+            Chào mừng bạn đến với bài học về **Javascript cơ bản**!
+            Javascript là ngôn ngữ lập trình phổ biến nhất thế giới để phát triển web. Nó giúp trang web của bạn trở nên động và tương tác hơn.
+            ### 1. Biến và Kiểu dữ liệu
+            Trong Javascript, bạn có thể khai báo biến với \`var\`, \`let\`, và \`const\`. Mỗi loại có phạm vi và cách sử dụng khác nhau.
+            * \`var\`: Phạm vi hàm, có thể khai báo lại và gán lại.
+            * \`let\`: Phạm vi khối, có thể gán lại nhưng không khai báo lại.
+            * \`const\`: Phạm vi khối, không thể gán lại (hằng số).
             \`\`\`json
             {
               "type": "lesson_data",
-              "title": "Basic Javascript",
+              "title": "Javascript Cơ bản",
               "nodes": [
-                { "id": "intro", "type": "concept", "text": "What is Javascript?", "description": "Programming language for dynamic web.", "x": 100, "y": 100, "color": "#FFC0CB" },
-                { "id": "vars", "type": "concept", "text": "Variables & Data Types", "description": "var, let, const", "x": 300, "y": 100, "color": "#ADD8E6" },
-                { "id": "var_exp", "type": "example", "text": "var example", "description": "var x = 10;", "x": 200, "y": 250, "color": "#DDA0DD" },
+                { "id": "intro", "type": "concept", "text": "Javascript là gì?", "description": "Ngôn ngữ lập trình cho web động.", "x": 100, "y": 100, "color": "#FFC0CB", "isMainTopic": true },
+                { "id": "vars", "type": "concept", "text": "Biến & Kiểu dữ liệu", "description": "var, let, const", "x": 300, "y": 100, "color": "#ADD8E6" },
+                { "id": "var_exp", "type": "example", "text": "Ví dụ var", "description": "var x = 10;", "x": 200, "y": 250, "color": "#DDA0DD" },
                 { "id": "let_exp", "type": "example", "description": "let y = 20;", "x": 400, "y": 250, "color": "#DDA0DD" }
               ],
               "connections": [
                 { "from": "intro", "to": "vars" },
-                { "from": "vars", "to": "var_exp", "text": "Example" },
-                { "from": "vars", "to": "let_exp", "text": "Example" }
+                { "from": "vars", "to": "var_exp", "text": "Ví dụ" },
+                { "from": "vars", "to": "let_exp", "text": "Ví dụ" }
               ]
             }
             \`\`\`
         `;
 
-        // --- UTILITY FUNCTIONS ---
+        // --- HÀM TIỆN ÍCH ---
         /**
-         * Displays a toast notification message to the user.
-         * @param {string} message - The message to display.
-         * @param {'info'|'success'|'error'} type - The type of toast (determines color and icon).
+         * Hiển thị thông báo toast cho người dùng.
+         * @param {string} message - Nội dung tin nhắn.
+         * @param {'info'|'success'|'error'} type - Loại thông báo (quyết định màu sắc và biểu tượng).
          */
         function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
@@ -871,6 +873,12 @@
                     strokeWidth: 1,
                 });
 
+                // Apply special styling for the main topic node
+                if (nodeData.isMainTopic) {
+                    rect.stroke("#FF0000"); // Red border for main topic
+                    rect.strokeWidth(3);
+                }
+
                 // Position text inside the rectangle to center it
                 text.position({
                     x: (rect.width() - textMetrics.width) / 2 - PADDING/2, 
@@ -885,7 +893,8 @@
                 const d3Node = { 
                     id: nodeData.id, 
                     konvaGroup: group,
-                    konvaRect: rect // Store reference to rect for getRectIntersectionPoint
+                    konvaRect: rect, // Store reference to rect for getRectIntersectionPoint
+                    isMainTopic: nodeData.isMainTopic || false // Pass main topic flag to D3 node
                 };
                 d3Nodes.push(d3Node);
                 currentKonvaNodes.push(d3Node); // Store for later access (e.g., force layout activation)
@@ -943,9 +952,16 @@
 
             // 3. Setup D3 Force Simulation
             d3Simulation = d3.forceSimulation(d3Nodes)
-                .force("link", d3.forceLink(d3Links).id(d => d.id).distance(100)) // Link force with desired distance
-                .force("charge", d3.forceManyBody().strength(-300)) // Node repulsion force
+                .force("link", d3.forceLink(d3Links).id(d => d.id).distance(150).strength(0.7)) // Stronger link, greater distance
+                .force("charge", d3.forceManyBody().strength(-350).theta(0.8)) // Stronger repulsion, adjust theta for quality
                 .force("center", d3.forceCenter(stage.width() / 2, stage.height() / 2)) // Center force
+                .force("x", d3.forceX(stage.width() / 2).strength(0.1)) // Gentle pull to horizontal center
+                .force("y", d3.forceY(d => { // Stronger pull to vertical position based on sequential order
+                    // Assign Y based on node's order for a top-down sequential flow
+                    const nodeIndex = lessonData.nodes.findIndex(n => n.id === d.id);
+                    // Distribute nodes vertically across a good portion of the stage height
+                    return stage.height() * (0.15 + (nodeIndex / Math.max(1, lessonData.nodes.length -1)) * 0.7);
+                }).strength(0.7)) // Moderate-strong pull to specific Y
                 .on("tick", () => { // Update Konva positions on each simulation tick
                     // Update node positions
                     d3Nodes.forEach(d => {

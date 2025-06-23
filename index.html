@@ -952,16 +952,16 @@
 
             // 3. Setup D3 Force Simulation
             d3Simulation = d3.forceSimulation(d3Nodes)
-                .force("link", d3.forceLink(d3Links).id(d => d.id).distance(150).strength(0.7)) // Stronger link, greater distance
-                .force("charge", d3.forceManyBody().strength(-350).theta(0.8)) // Stronger repulsion, adjust theta for quality
-                .force("center", d3.forceCenter(stage.width() / 2, stage.height() / 2)) // Center force
-                .force("x", d3.forceX(stage.width() / 2).strength(0.1)) // Gentle pull to horizontal center
-                .force("y", d3.forceY(d => { // Stronger pull to vertical position based on sequential order
-                    // Assign Y based on node's order for a top-down sequential flow
+                .force("link", d3.forceLink(d3Links).id(d => d.id).distance(180).strength(0.8)) // Tăng khoảng cách và lực hút
+                .force("charge", d3.forceManyBody().strength(-400).theta(0.8)) // Tăng lực đẩy giữa các node
+                .force("center", d3.forceCenter(stage.width() / 2, stage.height() / 2)) // Lực kéo về trung tâm
+                .force("x", d3.forceX(stage.width() / 2).strength(0.2)) // Kéo nhẹ về trung tâm ngang
+                .force("y", d3.forceY(d => { // Kéo mạnh về vị trí Y dựa trên thứ tự ban đầu
+                    // Định hướng Y dựa trên thứ tự xuất hiện của node trong mảng lessonData.nodes
                     const nodeIndex = lessonData.nodes.findIndex(n => n.id === d.id);
-                    // Distribute nodes vertically across a good portion of the stage height
-                    return stage.height() * (0.15 + (nodeIndex / Math.max(1, lessonData.nodes.length -1)) * 0.7);
-                }).strength(0.7)) // Moderate-strong pull to specific Y
+                    // Phân bổ các node theo chiều dọc, với node đầu tiên ở gần đỉnh, cuối cùng ở gần đáy
+                    return stage.height() * (0.1 + (nodeIndex / Math.max(1, lessonData.nodes.length -1)) * 0.8);
+                }).strength(0.9)) // Lực kéo dọc mạnh mẽ hơn để tạo dòng chảy top-down
                 .on("tick", () => { // Update Konva positions on each simulation tick
                     // Update node positions
                     d3Nodes.forEach(d => {
@@ -1025,9 +1025,11 @@
                 });
             });
             d3Simulation.alpha(1).restart(); // Start simulation with higher alpha for initial settling
+            // Tăng thời gian chạy ban đầu để sơ đồ có thêm thời gian ổn định
             setTimeout(() => {
-                d3Simulation.alphaTarget(0); // Stop simulation after a short while for stability
-            }, 2000);
+                d3Simulation.alphaTarget(0); // Stop simulation after a longer while for stability
+            }, 3000); // Chạy 3 giây
+
         }
 
         // Helper to get center of node (updated to receive group and rect)

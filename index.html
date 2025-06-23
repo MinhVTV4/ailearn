@@ -225,7 +225,6 @@
         let gridLayer; // Optional: Separate layer for grid
 
         // System prompt for AI to generate learning content and canvas data
-        // Updated prompt to encourage better coordinate generation for force layout
         const LEARNING_SYSTEM_PROMPT = `
         Bạn là một giáo viên AI chuyên nghiệp và tận tâm. Mục tiêu của bạn là giúp người học hiểu sâu về một chủ đề thông qua giải thích, ví dụ, và tạo ra các thành phần trực quan trên canvas.
         Khi người dùng yêu cầu một chủ đề học, hãy:
@@ -235,6 +234,7 @@
             **Hãy đảm bảo các node được phân bổ một cách có tổ chức, tránh chồng chéo tối đa, và thể hiện rõ ràng dòng chảy thông tin hoặc cấu trúc phân cấp (ví dụ: các node tổng quan ở trên, các node chi tiết ở dưới).**
             **Sử dụng các tọa độ X, Y ban đầu để phân tán các node đều khắp canvas (giả định kích thước canvas là 800x600 để định vị sơ bộ).**
             **Node đầu tiên trong mảng 'nodes' phải là node chủ đề chính hoặc node khởi đầu. Đánh dấu node chủ đề chính bằng "isMainTopic": true.**
+            **Mỗi nhãn đường nối ("text" trong "connections") PHẢI ngắn gọn, chỉ 1-3 từ.**
             \`\`\`json
             {
               "type": "lesson_data",
@@ -928,13 +928,29 @@
 
                     let label = null;
                     if (conn.text) {
-                        label = new Konva.Text({
+                        const labelText = new Konva.Text({
                             text: conn.text,
                             fontSize: 12,
                             fill: conn.color || '#555',
                             fontFamily: 'Inter, Arial, sans-serif',
+                            padding: 3, // Padding cho text trong label
                         });
-                        layer.add(label);
+
+                        // Tính toán kích thước nền cho label
+                        const labelMetrics = labelText.measureSize(conn.text);
+                        const labelRect = new Konva.Rect({
+                            width: labelMetrics.width + 6, // Thêm padding
+                            height: labelMetrics.height + 6, // Thêm padding
+                            fill: '#FFFFFF', // Màu nền trắng
+                            opacity: 0.8, // Hơi trong suốt
+                            cornerRadius: 5,
+                        });
+
+                        const labelGroup = new Konva.Group();
+                        labelGroup.add(labelRect);
+                        labelGroup.add(labelText);
+                        layer.add(labelGroup);
+                        label = labelGroup; // Sử dụng group làm label Konva
                     }
 
                     d3Links.push({ 
@@ -952,18 +968,16 @@
 
             // 3. Setup D3 Force Simulation
             d3Simulation = d3.forceSimulation(d3Nodes)
-                .force("link", d3.forceLink(d3Links).id(d => d.id).distance(180).strength(0.8)) // Tăng khoảng cách và lực hút
-                .force("charge", d3.forceManyBody().strength(-400).theta(0.8)) // Tăng lực đẩy giữa các node
+                .force("link", d3.forceLink(d3Links).id(d => d.id).distance(220).strength(0.9)) // Tăng khoảng cách và lực hút mạnh hơn
+                .force("charge", d3.forceManyBody().strength(-800).theta(0.8)) // Tăng lực đẩy giữa các node mạnh hơn
                 .force("center", d3.forceCenter(stage.width() / 2, stage.height() / 2)) // Lực kéo về trung tâm
-                .force("x", d3.forceX(stage.width() / 2).strength(0.2)) // Kéo nhẹ về trung tâm ngang
+                .force("x", d3.forceX(stage.width() / 2).strength(0.3)) // Kéo về trung tâm ngang mạnh hơn
                 .force("y", d3.forceY(d => { // Kéo mạnh về vị trí Y dựa trên thứ tự ban đầu
-                    // Định hướng Y dựa trên thứ tự xuất hiện của node trong mảng lessonData.nodes
                     const nodeIndex = lessonData.nodes.findIndex(n => n.id === d.id);
-                    // Phân bổ các node theo chiều dọc, với node đầu tiên ở gần đỉnh, cuối cùng ở gần đáy
                     return stage.height() * (0.1 + (nodeIndex / Math.max(1, lessonData.nodes.length -1)) * 0.8);
-                }).strength(0.9)) // Lực kéo dọc mạnh mẽ hơn để tạo dòng chảy top-down
+                }).strength(1.5)) // Lực kéo dọc cực mạnh để tạo dòng chảy top-down rõ rệt
                 // Thêm lực tránh va chạm cho các node hình chữ nhật. radius phải lớn hơn một nửa đường chéo
-                .force("collide", d3.forceCollide().radius(d => Math.max(d.konvaRect.width(), d.konvaRect.height()) / 2 + 15).iterations(2)) // Thêm padding và số lần lặp lại
+                .force("collide", d3.forceCollide().radius(d => Math.max(d.konvaRect.width(), d.konvaRect.height()) / 2 + 20).iterations(3)) // Tăng padding và số lần lặp lại
                 .on("tick", () => { // Update Konva positions on each simulation tick
                     // Update node positions
                     d3Nodes.forEach(d => {
@@ -1001,9 +1015,22 @@
 
                         // Update label position if it exists
                         if (link.konvaLabel) {
-                            link.konvaLabel.x((startIntersection.x + endIntersection.x) / 2);
-                            link.konvaLabel.y((startIntersection.y + endIntersection.y) / 2 - 15);
-                            link.konvaLabel.rotation(Math.atan2(endIntersection.y - startIntersection.y, endIntersection.x - startIntersection.x) * 180 / Math.PI);
+                            const labelGroup = link.konvaLabel;
+                            const labelText = labelGroup.children[1]; // Konva.Text là con thứ hai
+                            const labelRect = labelGroup.children[0]; // Konva.Rect là con đầu tiên
+
+                            labelGroup.x((startIntersection.x + endIntersection.x) / 2 - labelRect.width() / 2);
+                            labelGroup.y((startIntersection.y + endIntersection.y) / 2 - labelRect.height() / 2);
+                            
+                            // Tính toán góc quay của đường nối và áp dụng cho group label
+                            const angleRad = Math.atan2(endIntersection.y - startIntersection.y, endIntersection.x - startIntersection.x);
+                            labelGroup.rotation(angleRad * 180 / Math.PI);
+
+                            // Đảm bảo văn bản và nền vẫn ở đúng vị trí trong group sau khi xoay
+                            labelText.x(0);
+                            labelText.y(0);
+                            labelRect.x(0);
+                            labelRect.y(0);
                         }
                     });
                     layer.batchDraw();

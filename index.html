@@ -5,12 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Học Tập Tương Tác</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Thư viện Marked để xử lý Markdown -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Thư viện DOMPurify để làm sạch HTML -->
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.6/dist/purify.min.js"></script>
-    <!-- Thư viện Konva.js để vẽ trên Canvas -->
-    <script src="https://cdn.jsdelivr.net/npm/konva@8.x.x/konva.min.js"></script>
     <style>
         /* Phong cách cuộn tùy chỉnh */
         :root {
@@ -162,6 +156,11 @@
     <!-- Container cho thông báo Toast -->
     <div id="toast-container" class="fixed top-5 right-5 z-[100] space-y-2"></div>
 
+    <!-- Các thẻ script được chuyển xuống cuối body -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.6/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/konva@8.x.x/konva.min.js"></script>
+    
     <script type="module">
         // Import các module Firebase từ CDN
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
@@ -385,6 +384,7 @@
                 }
             }
             // Khởi tạo Konva Stage và Layer sau khi có người dùng (ẩn danh hoặc xác thực)
+            // Đảm bảo canvas đã được render và có kích thước
             initCanvas();
             // Hiển thị tin nhắn chào mừng trong chatbox
             addMessage('ai', 'Chào mừng bạn đến với AI Học Tập! Hãy nhập câu hỏi hoặc yêu cầu một chủ đề (ví dụ: "giải thích HTML", "cấu trúc dữ liệu", "khái niệm Vật lý lượng tử") để bắt đầu bài học được trực quan hóa tại đây.');

@@ -232,7 +232,7 @@
         1.  **Phân tích và Chia nhỏ:** Chia chủ đề thành các phần nhỏ, logic, theo một **trình tự logic và cấu trúc phân cấp (ví dụ: từ tổng quan đến chi tiết, hoặc từng bước)**.
         2.  **Giải thích Chatbox:** Cung cấp giải thích chi tiết, rõ ràng cho từng phần trong chatbox, sử dụng Markdown (tiêu đề, danh sách, in đậm, code block).
         3.  **Dữ liệu Canvas:** **QUAN TRỌNG:** Đồng thời, tạo ra một đối tượng JSON DỮ LIỆU CẦU TRÚC để tôi có thể vẽ trên Canvas. JSON này phải tuân thủ định dạng sau.
-            **Hãy đảm bảo các node được phân bổ một cách có tổ chức, tránh chồng chéo, và thể hiện rõ ràng dòng chảy thông tin hoặc cấu trúc phân cấp (ví dụ: các node tổng quan ở trên, các node chi tiết ở dưới).**
+            **Hãy đảm bảo các node được phân bổ một cách có tổ chức, tránh chồng chéo tối đa, và thể hiện rõ ràng dòng chảy thông tin hoặc cấu trúc phân cấp (ví dụ: các node tổng quan ở trên, các node chi tiết ở dưới).**
             **Sử dụng các tọa độ X, Y ban đầu để phân tán các node đều khắp canvas (giả định kích thước canvas là 800x600 để định vị sơ bộ).**
             **Node đầu tiên trong mảng 'nodes' phải là node chủ đề chính hoặc node khởi đầu. Đánh dấu node chủ đề chính bằng "isMainTopic": true.**
             \`\`\`json
@@ -962,6 +962,8 @@
                     // Phân bổ các node theo chiều dọc, với node đầu tiên ở gần đỉnh, cuối cùng ở gần đáy
                     return stage.height() * (0.1 + (nodeIndex / Math.max(1, lessonData.nodes.length -1)) * 0.8);
                 }).strength(0.9)) // Lực kéo dọc mạnh mẽ hơn để tạo dòng chảy top-down
+                // Thêm lực tránh va chạm cho các node hình chữ nhật. radius phải lớn hơn một nửa đường chéo
+                .force("collide", d3.forceCollide().radius(d => Math.max(d.konvaRect.width(), d.konvaRect.height()) / 2 + 15).iterations(2)) // Thêm padding và số lần lặp lại
                 .on("tick", () => { // Update Konva positions on each simulation tick
                     // Update node positions
                     d3Nodes.forEach(d => {

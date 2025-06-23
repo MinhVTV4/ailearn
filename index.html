@@ -168,7 +168,6 @@
         import { getAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-ai.js";
         
         // Khởi tạo Firebase
-        // Cấu hình Firebase MỚI CỦA BẠN
         const firebaseConfig = {
             apiKey: "AIzaSyDDp2ugpgSbqtkQMFLHSNsL0cFMxYBdyng",
             authDomain: "ailearn-e8cc0.firebaseapp.com",
@@ -681,6 +680,80 @@
         }
 
         /**
+         * Hàm helper để tính toán điểm giao của đường thẳng với hình chữ nhật.
+         * Điều này giúp đường nối bắt đầu/kết thúc tại cạnh của node thay vì tâm.
+         * Tham khảo: [https://stackoverflow.com/questions/29241569/konva-js-how-to-draw-arrow-from-center-of-a-rectangle-to-center-of-another-rec](https://stackoverflow.com/questions/29241569/konva-js-how-to-draw-arrow-from-center-of-a-rectangle-to-center-of-another-rec)
+         * @param {{x: number, y: number}} p1 - Điểm bắt đầu của đường thẳng (thường là tâm node nguồn).
+         * @param {{x: number, y: number}} p2 - Điểm kết thúc của đường thẳng (thường là tâm node đích).
+         * @param {{x: number, y: number, width: number, height: number}} r - Hình chữ nhật (node đích hoặc nguồn).
+         * @returns {{x: number, y: number}} Điểm giao nhau.
+         */
+        function getRectIntersectionPoint(p1, p2, r) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+
+            const rx = r.x;
+            const ry = r.y;
+            const rw = r.width;
+            const rh = r.height;
+
+            let t = Infinity; // parameter for line (p1 + t*vec)
+
+            // Left edge
+            if (dx !== 0) {
+                const t1 = (rx - p1.x) / dx;
+                if (t1 >= 0 && t1 <= 1) {
+                    const y = p1.y + t1 * dy;
+                    if (y >= ry && y <= ry + rh) {
+                        t = Math.min(t, t1);
+                    }
+                }
+            }
+
+            // Right edge
+            if (dx !== 0) {
+                const t2 = (rx + rw - p1.x) / dx;
+                if (t2 >= 0 && t2 <= 1) {
+                    const y = p1.y + t2 * dy;
+                    if (y >= ry && y <= ry + rh) {
+                        t = Math.min(t, t2);
+                    }
+                }
+            }
+
+            // Top edge
+            if (dy !== 0) {
+                const t3 = (ry - p1.y) / dy;
+                if (t3 >= 0 && t3 <= 1) {
+                    const x = p1.x + t3 * dx;
+                    if (x >= rx && x <= rx + rw) {
+                        t = Math.min(t, t3);
+                    }
+                }
+            }
+
+            // Bottom edge
+            if (dy !== 0) {
+                const t4 = (ry + rh - p1.y) / dy;
+                if (t4 >= 0 && t4 <= 1) {
+                    const x = p1.x + t4 * dx;
+                    if (x >= rx && x <= rx + rw) {
+                        t = Math.min(t, t4);
+                    }
+                }
+            }
+
+            if (t === Infinity) {
+                return p2; // No intersection found, return the target point
+            }
+            return {
+                x: p1.x + t * dx,
+                y: p1.y + t * dy
+            };
+        }
+
+
+        /**
          * Render nội dung trên canvas Konva dựa trên dữ liệu JSON đã phân tích.
          * @param {object} lessonData - Đối tượng JSON chứa nodes, connections.
          */
@@ -694,6 +767,7 @@
             canvasPlaceholder.classList.add('hidden'); // Ẩn placeholder khi có nội dung
 
             const nodes = {}; // Đối tượng để dễ dàng truy cập các node theo ID
+            const PADDING = 20; // Padding bên trong node
 
             // 1. Vẽ các Nodes
             lessonData.nodes.forEach(nodeData => {
@@ -703,9 +777,25 @@
                     draggable: true, // Cho phép kéo các node
                 });
 
+                const text = new Konva.Text({
+                    text: nodeData.text,
+                    fontSize: 16,
+                    fontFamily: 'Inter, Arial, sans-serif',
+                    fill: '#333',
+                    align: 'center',
+                    verticalAlign: 'middle',
+                    padding: PADDING / 2, // Sử dụng padding một nửa cho text để dễ điều chỉnh
+                    wrap: 'word',
+                });
+                
+                // Tính toán kích thước thực của văn bản để điều chỉnh kích thước hình chữ nhật
+                const textMetrics = text.measureSize(nodeData.text);
+                const rectWidth = Math.max(120, textMetrics.width + PADDING); // Đảm bảo chiều rộng tối thiểu
+                const rectHeight = Math.max(60, textMetrics.height + PADDING); // Đảm bảo chiều cao tối thiểu
+
                 const rect = new Konva.Rect({
-                    width: 180, // Chiều rộng mặc định, sẽ điều chỉnh sau
-                    height: 80, // Chiều cao mặc định
+                    width: rectWidth,
+                    height: rectHeight,
                     fill: nodeData.color || '#E0E0E0',
                     cornerRadius: 10,
                     shadowBlur: 5,
@@ -714,34 +804,16 @@
                     strokeWidth: 1,
                 });
 
-                const text = new Konva.Text({
-                    text: nodeData.text,
-                    fontSize: 16,
-                    fontFamily: 'Inter, Arial, sans-serif',
-                    fill: '#333',
-                    align: 'center',
-                    verticalAlign: 'middle',
-                    padding: 10,
-                    width: rect.width(),
-                    height: rect.height(),
-                    wrap: 'word',
+                // Đặt vị trí văn bản trong hình chữ nhật để căn giữa
+                text.position({
+                    x: (rect.width() - textMetrics.width) / 2 - PADDING/2, // Điều chỉnh vị trí text để nó căn giữa trong padding của rect
+                    y: (rect.height() - textMetrics.height) / 2 - PADDING/2,
                 });
-                
+
                 group.add(rect);
                 group.add(text);
                 layer.add(group);
-                nodes[nodeData.id] = group;
-
-                // Điều chỉnh kích thước hình chữ nhật và vị trí văn bản dựa trên kích thước văn bản
-                // Konva cần một chút thời gian để tính toán kích thước văn bản chính xác
-                // Thực hiện sau khi text và rect đã được thêm vào group và layer
-                const textMetrics = text.measureSize(nodeData.text);
-                rect.width(textMetrics.width + 20); // Thêm padding
-                rect.height(textMetrics.height + 20); // Thêm padding
-                text.position({
-                    x: (rect.width() - textMetrics.width) / 2,
-                    y: (rect.height() - textMetrics.height) / 2,
-                });
+                nodes[nodeData.id] = group; // Lưu group thay vì rect
 
                 // Nếu có mô tả chi tiết, có thể hiển thị khi click hoặc hover
                 if (nodeData.description) {
@@ -753,21 +825,35 @@
 
             // 2. Vẽ các Connections (đường nối)
             lessonData.connections.forEach(conn => {
-                const fromNode = nodes[conn.from];
-                const toNode = nodes[conn.to];
+                const fromNodeGroup = nodes[conn.from];
+                const toNodeGroup = nodes[conn.to];
 
-                if (fromNode && toNode) {
-                    // Hàm lấy điểm trung tâm của node
-                    const getNodeCenter = (node) => ({
-                        x: node.x() + node.getClientRect().width / 2,
-                        y: node.y() + node.getClientRect().height / 2,
+                if (fromNodeGroup && toNodeGroup) {
+                    // Lấy vị trí và kích thước thực của các node (group bao gồm rect và text)
+                    const fromRect = fromNodeGroup.children[0]; // Giả sử rect là phần tử con đầu tiên
+                    const toRect = toNodeGroup.children[0];
+
+                    const p1 = {
+                        x: fromNodeGroup.x() + fromRect.width() / 2,
+                        y: fromNodeGroup.y() + fromRect.height() / 2,
+                    };
+                    const p2 = {
+                        x: toNodeGroup.x() + toRect.width() / 2,
+                        y: toNodeGroup.y() + toRect.height() / 2,
+                    };
+
+                    // Tính toán điểm giao với cạnh của các hình chữ nhật
+                    const startIntersection = getRectIntersectionPoint(p1, p2, {
+                        x: fromNodeGroup.x(), y: fromNodeGroup.y(),
+                        width: fromRect.width(), height: fromRect.height()
+                    });
+                    const endIntersection = getRectIntersectionPoint(p2, p1, { // Đảo ngược p1, p2 để tính giao điểm với toRect
+                        x: toNodeGroup.x(), y: toNodeGroup.y(),
+                        width: toRect.width(), height: toRect.height()
                     });
 
-                    const startPoint = getNodeCenter(fromNode);
-                    const endPoint = getNodeCenter(toNode);
-
                     const line = new Konva.Arrow({
-                        points: [startPoint.x, startPoint.y, endPoint.x, endPoint.y],
+                        points: [startIntersection.x, startIntersection.y, endIntersection.x, endIntersection.y],
                         stroke: conn.color || '#000000',
                         strokeWidth: 2,
                         pointerLength: 10,
@@ -777,13 +863,29 @@
 
                     // Cập nhật vị trí đường nối khi các node bị kéo
                     const updateLinePoints = () => {
-                        const newStart = getNodeCenter(fromNode);
-                        const newEnd = getNodeCenter(toNode);
-                        line.points([newStart.x, newStart.y, newEnd.x, newEnd.y]);
+                        const newP1 = {
+                            x: fromNodeGroup.x() + fromRect.width() / 2,
+                            y: fromNodeGroup.y() + fromRect.height() / 2,
+                        };
+                        const newP2 = {
+                            x: toNodeGroup.x() + toRect.width() / 2,
+                            y: toNodeGroup.y() + toRect.height() / 2,
+                        };
+
+                        const newStartIntersection = getRectIntersectionPoint(newP1, newP2, {
+                            x: fromNodeGroup.x(), y: fromNodeGroup.y(),
+                            width: fromRect.width(), height: fromRect.height()
+                        });
+                        const newEndIntersection = getRectIntersectionPoint(newP2, newP1, {
+                            x: toNodeGroup.x(), y: toNodeGroup.y(),
+                            width: toRect.width(), height: toRect.height()
+                        });
+
+                        line.points([newStartIntersection.x, newStartIntersection.y, newEndIntersection.x, newEndIntersection.y]);
                         layer.batchDraw();
                     };
-                    fromNode.on('dragmove', updateLinePoints);
-                    toNode.on('dragmove', updateLinePoints);
+                    fromNodeGroup.on('dragmove', updateLinePoints);
+                    toNodeGroup.on('dragmove', updateLinePoints);
 
                     // Thêm label cho đường nối nếu có
                     if (conn.text) {
@@ -792,25 +894,25 @@
                             fontSize: 12,
                             fill: conn.color || '#555',
                             fontFamily: 'Inter, Arial, sans-serif',
-                            rotation: Math.atan2(endPoint.y - startPoint.y, endPoint.x - startPoint.x) * 180 / Math.PI,
+                            rotation: Math.atan2(endIntersection.y - startIntersection.y, endIntersection.x - startIntersection.x) * 180 / Math.PI,
                         });
                         // Đặt label ở giữa đường nối
-                        label.x((startPoint.x + endPoint.x) / 2);
-                        label.y((startPoint.y + endPoint.y) / 2 - 15); // Dịch lên trên một chút
+                        label.x((startIntersection.x + endIntersection.x) / 2);
+                        label.y((startIntersection.y + endIntersection.y) / 2 - 15); // Dịch lên trên một chút
                         layer.add(label);
 
                         // Cập nhật vị trí label khi node di chuyển
-                        fromNode.on('dragmove', () => {
+                        fromNodeGroup.on('dragmove', () => {
                             updateLinePoints();
-                            const newStart = getNodeCenter(fromNode);
-                            const newEnd = getNodeCenter(toNode);
+                            const newStart = getRectIntersectionPoint(getNodeCenter(fromNodeGroup, fromRect), getNodeCenter(toNodeGroup, toRect), { x: fromNodeGroup.x(), y: fromNodeGroup.y(), width: fromRect.width(), height: fromRect.height() });
+                            const newEnd = getRectIntersectionPoint(getNodeCenter(toNodeGroup, toRect), getNodeCenter(fromNodeGroup, fromRect), { x: toNodeGroup.x(), y: toNodeGroup.y(), width: toRect.width(), height: toRect.height() });
                             label.x((newStart.x + newEnd.x) / 2);
                             label.y((newStart.y + newEnd.y) / 2 - 15);
                         });
-                        toNode.on('dragmove', () => {
+                        toNodeGroup.on('dragmove', () => {
                             updateLinePoints();
-                            const newStart = getNodeCenter(fromNode);
-                            const newEnd = getNodeCenter(toNode);
+                            const newStart = getRectIntersectionPoint(getNodeCenter(fromNodeGroup, fromRect), getNodeCenter(toNodeGroup, toRect), { x: fromNodeGroup.x(), y: fromNodeGroup.y(), width: fromRect.width(), height: fromRect.height() });
+                            const newEnd = getRectIntersectionPoint(getNodeCenter(toNodeGroup, toRect), getNodeCenter(fromNodeGroup, fromRect), { x: toNodeGroup.x(), y: toNodeGroup.y(), width: toRect.width(), height: toRect.height() });
                             label.x((newStart.x + newEnd.x) / 2);
                             label.y((newStart.y + newEnd.y) / 2 - 15);
                         });
@@ -819,6 +921,14 @@
             });
 
             layer.batchDraw(); // Cập nhật canvas sau khi vẽ tất cả
+        }
+
+        // Helper để lấy center của node (đã cập nhật để nhận group và rect)
+        function getNodeCenter(nodeGroup, nodeRect) {
+            return {
+                x: nodeGroup.x() + nodeRect.width() / 2,
+                y: nodeGroup.y() + nodeRect.height() / 2
+            };
         }
 
         // --- CÁC SỰ KIỆN TOÀN CỤC ---

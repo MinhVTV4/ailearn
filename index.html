@@ -108,6 +108,10 @@
                         <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
                         <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM3 11a1 1 0 100-2H2a1 1 0 100 2h1z" clip-rule="evenodd"></path></svg>
                     </button>
+                    <!-- Nút Xóa Canvas mới -->
+                    <button id="clear-canvas-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" title="Xóa Canvas">
+                        <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.67-.114 1.022-.165m-1.022.165L5.41 19.673a2.25 2.25 0 002.244 2.077h7.212a2.25 2.25 0 002.244-2.077L19.25 5.79m0 0h-.008v.008H19.25z" /></svg>
+                    </button>
                 </div>
             </header>
 
@@ -206,16 +210,20 @@
         const canvasContainer = document.getElementById('canvas-container');
         const learningCanvas = document.getElementById('learning-canvas');
         const canvasPlaceholder = document.getElementById('canvas-placeholder');
+        const clearCanvasBtn = document.getElementById('clear-canvas-btn'); // Thêm nút clear canvas
 
         let stage, layer; // Các đối tượng Konva Stage và Layer
 
         // Chỉ thị hệ thống cho AI để tạo nội dung học tập và dữ liệu canvas
+        // Đã cập nhật prompt để khuyến khích AI cung cấp tọa độ tốt hơn
         const LEARNING_SYSTEM_PROMPT = `
         Bạn là một giáo viên AI chuyên nghiệp và tận tâm. Mục tiêu của bạn là giúp người học hiểu sâu về một chủ đề thông qua giải thích, ví dụ, và tạo ra các thành phần trực quan trên canvas.
         Khi người dùng yêu cầu một chủ đề học, hãy:
         1.  **Phân tích và Chia nhỏ:** Chia chủ đề thành các phần nhỏ, logic.
         2.  **Giải thích Chatbox:** Cung cấp giải thích chi tiết, rõ ràng cho từng phần trong chatbox, sử dụng Markdown (tiêu đề, danh sách, in đậm, code block).
-        3.  **Dữ liệu Canvas:** **QUAN TRỌNG:** Đồng thời, tạo ra một đối tượng JSON DỮ LIỆU CẦU TRÚC để tôi có thể vẽ trên Canvas. JSON này phải tuân thủ định dạng sau:
+        3.  **Dữ liệu Canvas:** **QUAN TRỌNG:** Đồng thời, tạo ra một đối tượng JSON DỮ LIỆU CẦU TRÚC để tôi có thể vẽ trên Canvas. JSON này phải tuân thủ định dạng sau.
+            **Hãy cố gắng phân bổ các node sao cho chúng không chồng chéo, có đủ khoảng cách hợp lý giữa chúng, và thể hiện rõ ràng luồng hoặc cấu trúc phân cấp của kiến thức.**
+            **Sử dụng các tọa độ X, Y để phân tán các node đều khắp canvas (giả định kích thước canvas là 800x600 để định vị sơ bộ).**
             \`\`\`json
             {
               "type": "lesson_data",
@@ -921,6 +929,7 @@
             });
 
             layer.batchDraw(); // Cập nhật canvas sau khi vẽ tất cả
+            centerMindMap(); // Gọi hàm căn giữa sau khi vẽ
         }
 
         // Helper để lấy center của node (đã cập nhật để nhận group và rect)
@@ -929,6 +938,39 @@
                 x: nodeGroup.x() + nodeRect.width() / 2,
                 y: nodeGroup.y() + nodeRect.height() / 2
             };
+        }
+
+        // Hàm mới để căn giữa toàn bộ sơ đồ tư duy trên canvas
+        function centerMindMap() {
+            if (!stage || !layer || layer.children.length === 0) return;
+
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+            layer.children.forEach(child => {
+                const bbox = child.getClientRect();
+                minX = Math.min(minX, bbox.x);
+                minY = Math.min(minY, bbox.y);
+                maxX = Math.max(maxX, bbox.x + bbox.width);
+                maxY = Math.max(maxY, bbox.y + bbox.height);
+            });
+
+            const contentWidth = maxX - minX;
+            const contentHeight = maxY - minY;
+
+            const stageCenterX = stage.width() / 2;
+            const stageCenterY = stage.height() / 2;
+
+            const currentMapCenterX = minX + contentWidth / 2;
+            const currentMapCenterY = minY + contentHeight / 2;
+
+            const offsetX = stageCenterX - currentMapCenterX;
+            const offsetY = stageCenterY - currentMapCenterY;
+
+            // Di chuyển layer để căn giữa nội dung
+            layer.x(layer.x() + offsetX);
+            layer.y(layer.y() + offsetY);
+
+            layer.batchDraw();
         }
 
         // --- CÁC SỰ KIỆN TOÀN CỤC ---
@@ -1029,6 +1071,16 @@
             }
             if (scrollToTopBtn) { 
                 scrollToTopBtn.addEventListener("click", scrollToTop);
+            }
+            // Gán sự kiện cho nút Clear Canvas
+            if (clearCanvasBtn) {
+                clearCanvasBtn.addEventListener('click', () => {
+                    if (layer) {
+                        layer.destroyChildren();
+                        layer.batchDraw();
+                        canvasPlaceholder.classList.remove('hidden'); // Hiển thị lại placeholder
+                    }
+                });
             }
         });
 
